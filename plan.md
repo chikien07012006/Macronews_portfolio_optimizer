@@ -1,91 +1,156 @@
-# Implementation Plan — MacroNews Portfolio Lab
+# Implementation Plan
 
-> Trạng thái: **DRAFT, đang thảo luận.** Chưa chốt cụm/thứ tự.
-> Cập nhật: 2026-10-30 (tuần 7). Làm một mình.
+MacroNews Portfolio Lab · last updated 2026-10-30 (week 7)
 
-## Mốc thời gian cứng
+This document describes how the system in [docs/project_proposal.pdf](docs/project_proposal.pdf)
+is being built: the milestones, their order, the schedule, and where the implementation
+deliberately differs from the proposal.
 
-| Mốc | Ngày | Còn lại |
+## Deadlines
+
+| Milestone | Date |
+|---|---|
+| Progress report | 13 Nov 2026 |
+| Final presentation | 08 Jan 2027 |
+| Final report | 15 Jan 2027 |
+
+## Design principles
+
+1. **Prepare once, replay week by week.** All data are downloaded and all documents scored
+   ahead of time. The simulator then steps through history and, at each decision date,
+   only reads data that were available at that moment (prices up to the close, documents up
+   to 16:00 ET). This point-in-time access is the single place where time is enforced.
+2. **Price path first.** Prices → technical views → Black–Litterman → QP → replay gives a
+   complete, working system without any NLP. It is the target for the progress report.
+3. **Views are source-agnostic.** The view generator takes any feature matrix, so news
+   features plug into the same code as technical features.
+4. **No look-ahead is an invariant**, covered by unit tests in every milestone that handles
+   time.
+5. **The 2018–2023 test period is used once**, for the final results. All tuning happens on
+   2013–2017.
+6. **Keep the stack small.** Plain Python packages run from the repository root, one SQLite
+   file for storage, one YAML file for configuration.
+
+## Architecture
+
+| Folder | Responsibility | Milestones |
 |---|---|---|
-| Progress report | 13/11/2026 | ~2 tuần |
-| Final presentation | 08/01/2027 | ~10 tuần |
-| Final report | 15/01/2027 | ~11 tuần |
+| `common/` | Config loader, weekly decision and execution calendar | C0 |
+| `data_pipeline/` | Downloading, cleaning and storing all data in SQLite | C0, C1, C5 |
+| `optimization/` | Ledoit–Wolf covariance, equilibrium prior, Black–Litterman, QP, baselines | C2 |
+| `simulation/` | Point-in-time replay, features and Ridge views, rebalancing, metrics | C3, C4, C7, C8 |
+| `nlp/` | Topic labelling, lexicon and TF-IDF baselines, FinBERT, scoring, news indices | C6, C7 |
+| `backend/` | FastAPI: run, list and compare simulations, weekly drill-down | C9 |
+| `frontend/` | React interface for configuring and comparing runs | C9 |
 
-## Nguyên tắc
+Deployment (C9) uses Docker Compose with a backend and a frontend service. The SQLite file
+is mounted into the backend container as a volume, so no database server is needed.
 
-1. **Đi đường giá trước, đường text sau.** Đường giá (prices → technical views → BL → QP →
-   backtest) cho ra một hệ thống chạy được end-to-end mà không cần NLP. Đây là thứ cần có
-   cho progress report.
-2. **Engine nhận dữ liệu qua interface, không quan tâm nguồn.** View generator nhận một
-   ma trận feature bất kỳ (technical hoặc news), nên đường news chỉ việc cắm vào sau.
-3. **Không look-ahead** là bất biến, phải có unit test cho nó ở mọi cụm.
-4. Test set 2018–2023 chỉ chạy **một lần** khi có kết quả cuối.
+## Milestones
 
-## Các cụm (đề xuất)
+### C0: Foundation — done
+- `config.yaml` with all parameters from the proposal; typed loader with overrides.
+- Weekly calendar: decision date = last trading day of the week; execution at the next
+  close; documents assigned to weeks by the 16:00 ET cut-off (DST-aware).
+- SQLite storage: schema, upsert and query helpers.
+- Unit tests, including a randomized no-look-ahead test for document assignment.
 
-### C0 — Nền tảng
-Khung repo, config (YAML + `.env`), logging, lớp storage (Parquet khi dev, MySQL theo
-proposal), lịch giao dịch / các mốc thứ Sáu 16:00 ET.
+### C1: Market data
+- Daily adjusted prices from Yahoo Finance for the 11 core assets, XLRE, XLC and SPY,
+  2009–2023.
+- DTB3 and selected macro series from FRED; daily risk-free rate.
+- Daily and weekly excess returns.
+- Data validation: missing days, stale prices, outlier returns, coverage report.
 
-### C1 — Dữ liệu thị trường
-Giá điều chỉnh hằng ngày (yfinance) cho 11 tài sản + XLRE, XLC, SPY; DTB3 và vài macro
-series từ FRED; tính lợi suất vượt trội ngày/tuần; kiểm tra chất lượng dữ liệu.
+### C2: Optimization engine
+- Ledoit–Wolf covariance on 252 days, scaled to the 4-week horizon.
+- Equilibrium prior π = δΣw_ref (w_ref: 70% sectors equally weighted, 20% TLT, 10% GLD).
+- Black–Litterman posterior in Woodbury form.
+- Long-only mean-variance QP with turnover penalty (CVXPY, Clarabel, OSQP fallback).
+- Closed-form Lagrange solution and KKT checks as solver tests.
+- Baselines: equal weight, minimum variance, inverse volatility, Markowitz, BL without views.
+- Tested on synthetic data, independent of C1.
 
-### C2 — Portfolio engine (lõi toán)
-Ledoit–Wolf covariance, prior π = δΣw_ref, Black–Litterman (Woodbury), QP long-only với
-turnover penalty (CVXPY/Clarabel), closed-form Lagrange và KKT để test. Các baseline:
-EW, MinVar, InvVol, Markowitz, BL no-view. Test trên dữ liệu synthetic.
+### C3: Technical features and view generator
+- MOM (12 weeks, skipping the latest), REV (latest week), VOL (20 days), cross-sectionally
+  standardized.
+- Ridge view generator for any feature source: purged expanding window (minimum 156
+  weeks), view only if |q| > 0.5σ, Ω from out-of-fold residuals; builds P, q, Ω.
 
-### C3 — Technical features và view generator
-MOM / REV / VOL, chuẩn hoá cross-sectional; Ridge view generator dùng chung cho mọi nguồn
-(purged expanding window, ngưỡng |q| > 0.5σ, Ω từ residual out-of-fold); dựng P, q, Ω.
+### C4: Replay engine and metrics
+- Point-in-time data access per decision date.
+- Weekly walk-forward loop: drifted weights, execution at the next close, transaction costs.
+- Metrics: annualized return and volatility, Sharpe, Sortino, maximum drawdown, CVaR 95%,
+  turnover. Runs saved with their configuration.
+- **Result: a technical-only simulation running end to end (progress report).**
 
-### C4 — Backtest engine và metrics
-Walk-forward hằng tuần, khớp lệnh ở giá đóng cửa phiên kế tiếp, weight drift, phí giao
-dịch; metrics (return, vol, Sharpe, Sortino, MDD, CVaR, turnover); lưu các lần chạy.
-**→ Sau C4: hệ thống technical-only chạy được, đủ cho progress report.**
+### C5: Text data
+- FOMC statements, minutes and press conferences scraped from the Federal Reserve website.
+- FNSPID filtered to 2010–2023, title plus first paragraph, sampled by sector.
+- Cleaning, MinHash deduplication, timestamps converted to ET, tickers mapped to GICS
+  sectors.
 
-### C5 — Dữ liệu text
-Scrape FOMC (statements, minutes, press conf); tải và lọc FNSPID; làm sạch, MinHash dedup,
-chuẩn hoá timestamp sang giờ ET, map ticker sang GICS sector.
+### C6: NLP
+- Topic labels: LLM-assisted pre-labelling, reviewed by hand; written annotation guideline.
+- Baselines: Loughran–McDonald lexicon, TF-IDF with logistic regression, pre-trained FinBERT.
+- Multi-task FinBERT (topic, sentiment, stance) with masked loss; macro-F1 per task.
+- Scoring of the full corpus into `doc_scores`, versioned by model.
 
-### C6 — NLP
-Gán nhãn topic, baseline Loughran–McDonald và TF-IDF, FinBERT multi-task (masked loss),
-chấm điểm toàn bộ corpus và lưu vào `doc_scores`.
+### C7: News indices and news views
+- Weekly indices with a 14-day half-life over the last 8 weeks: topic sentiment S^(k),
+  monetary stance H, sector sentiment S^sec, uncertainty U.
+- Rolling 156-week standardization using past values only.
+- News features fed into the C3 view generator; Ω_news scaled by uncertainty.
 
-### C7 — News indices và news views
-Chỉ số tuần với decay half-life 14 ngày; S^(k), H, S^sec, U; z-score cuốn chiếu 156 tuần;
-cắm vào view generator ở C3.
+### C8: Evaluation
+- Ablation: no views, technical only, news only, both; against all baselines and SPY.
+- Placebo: news indices circularly shifted (≥ 52 weeks), 200 runs.
+- Stationary bootstrap for Sharpe differences (block length 8 weeks, 5,000 resamples).
+- Sensitivity: τ, γ, w_max, half-life, weekly vs monthly rebalancing.
+- Stress periods 2020 and 2022; NLP quality vs portfolio outcome.
 
-### C8 — Đánh giá đầy đủ
-Ablation (none / tech / news / both), placebo 200 lần, stationary bootstrap, sensitivity,
-giai đoạn stress 2020/2022, so sánh chất lượng NLP với kết quả danh mục.
+### C9: Web simulator
+- FastAPI: `POST /backtest`, `GET /runs`, `GET /compare`, `GET /week/{date}`.
+- React interface: configuration, equity and drawdown charts, weights over time,
+  run comparison, weekly drill-down.
+- Docker Compose.
 
-### C9 — Platform
-FastAPI (`/backtest`, `/runs`, `/compare`, `/week/{date}`), React frontend, Docker Compose.
+### C10: Reports
+- Progress report, final presentation, final report.
 
-### C10 — Báo cáo
-Progress report, slide, final report.
+## Schedule
 
-## Thứ tự và lịch (đề xuất)
-
-| Tuần | Ngày | Cụm |
+| Weeks | Dates | Milestones |
 |---|---|---|
-| 7–8 | 30/10 – 13/11 | C0, C1, C2, C3, C4 (bản tối thiểu) → progress report |
-| 9–10 | 16/11 – 27/11 | C5, C6 (baseline trước, FinBERT sau) |
-| 11 | 30/11 – 04/12 | C6 (fine-tune + chấm điểm), C7 |
-| 12–13 | 07/12 – 18/12 | C8 |
-| 14–15 | 21/12 – 01/01 | C9, viết báo cáo |
-| 16–17 | 04/01 – 15/01 | Thuyết trình, final report |
+| 7–8 | 30 Oct – 13 Nov | C0–C4 (minimal versions) → progress report |
+| 9–10 | 16 Nov – 27 Nov | C5, C6 baselines |
+| 11 | 30 Nov – 04 Dec | C6 FinBERT fine-tuning and scoring, C7 |
+| 12–13 | 07 Dec – 18 Dec | C8 |
+| 14–15 | 21 Dec – 01 Jan | C9, report drafting |
+| 16–17 | 04 Jan – 15 Jan | Presentation, final report |
 
-## Vấn đề cần chốt khi làm một mình
+## Deviations from the proposal
 
-- [ ] **Cohen's κ** cần ít nhất 2 người gán nhãn. Phương án: dùng một LLM làm annotator thứ
-      hai, hoặc nhờ một bạn gán 200 mẫu.
-- [ ] **Gán nhãn 1.500 văn bản** một mình: giảm xuống khoảng 600–800, hoặc dùng LLM gán
-      nhãn trước rồi mình sửa lại.
-- [ ] **FNSPID** (15.7 triệu bài): chỉ lấy title + đoạn đầu, giới hạn 2010–2023, lấy mẫu
-      theo ngành để giảm chi phí chấm điểm.
-- [ ] **MySQL hay Parquet/SQLite**: dùng Parquet khi dev cho nhanh, chuyển sang MySQL ở C9?
-- [ ] **Phạm vi frontend**: drill-down theo tuần có thể để sau cùng.
-- [ ] **GPU** cho fine-tune: Colab, Kaggle hay cloud?
+| Proposal | Implementation | Reason |
+|---|---|---|
+| MySQL database | SQLite (single file, Python standard library) | The simulator is read-mostly and single-user; no server to run or deploy. |
+| ~1,500 topic labels, 200 double-annotated | ~600–800 labels, LLM-assisted and reviewed by hand; 150–200 annotated independently by a second person for Cohen's κ | Workload; the reduced set is stratified by year, source and topic. |
+
+## Open decisions
+
+- [ ] Second annotator for Cohen's κ (a classmate is preferred over an LLM, which would not
+      be inter-annotator agreement in the usual sense).
+- [ ] FNSPID sample size per sector and year, given scoring cost.
+- [ ] GPU for fine-tuning: Colab, Kaggle or cloud.
+- [ ] Frontend scope: weekly drill-down may be delivered last.
+
+## Known limitations
+
+- **Text model and the test period.** Document scores are computed once, offline. If the
+  NLP model is trained on labelled data from 2018–2023 (the FOMC stance dataset extends to
+  2022), the test-period scores contain mild look-ahead. Training only on pre-2018 examples,
+  or reporting both variants, will be decided in C6.
+- **Domain shift.** The sentiment and stance datasets are sentence-level text from financial
+  reports and FOMC documents; news headlines differ in style.
+- **Independent view errors.** The block-diagonal Ω assumes news and technical view errors
+  are uncorrelated, as stated in the proposal.

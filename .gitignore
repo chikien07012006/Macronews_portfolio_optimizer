@@ -1,41 +1,29 @@
 # Python
 __pycache__/
 *.py[cod]
-*.egg-info/
-.eggs/
-build/
-dist/
+.pytest_cache/
+.ipynb_checkpoints/
 
-# Virtual env
+# Virtual environment
 .venv/
 venv/
 
-# Environment / secrets
+# Secrets
 .env
 
-# Tooling caches
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
-.coverage
-htmlcov/
-.ipynb_checkpoints/
-
-# Data (keep folder structure only)
+# Data: downloads and the SQLite database stay local
+data/*
+!data/raw/
 data/raw/*
-data/interim/*
-data/processed/*
-!data/**/.gitkeep
+!data/raw/.gitkeep
 
-# Models / experiment outputs
+# Models and experiment outputs
 models/
-outputs/
-runs/
 *.pt
 *.bin
 *.safetensors
 
-# Frontend (later)
+# Frontend
 node_modules/
 frontend/dist/
 

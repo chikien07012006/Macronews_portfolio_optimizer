@@ -1,0 +1,65 @@
+# Default experiment configuration. Values follow docs/project_proposal.pdf (Section 4).
+# Override per experiment with load_config(overrides={"optimizer.w_max": 0.25, ...}).
+
+universe:
+  sectors: [XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV, XLY]
+  others: [TLT, GLD]
+  optional:                # usable only from their inception date
+    XLRE: 2015-10-08
+    XLC: 2018-06-19
+  benchmark: SPY
+
+reference:                 # w_ref: equity share split equally across sector ETFs
+  equity: 0.70
+  TLT: 0.20
+  GLD: 0.10
+
+periods:
+  data_start: 2009-01-01   # one extra year so the 252-day covariance window is full in 2010
+  warmup_start: 2010-01-01
+  validation_start: 2013-01-01
+  test_start: 2018-01-01
+  end: 2023-12-31
+
+calendar:
+  timezone: America/New_York
+  cutoff: "16:00"          # documents after the decision-day close belong to the next week
+
+risk:
+  cov_window_days: 252
+  horizon_days: 20         # Sigma_t = 20 * Sigma_LW (daily -> 4-week horizon)
+
+prior:
+  delta: 2.5
+  tau: 0.05
+
+features:
+  mom_weeks: 12
+  mom_skip_weeks: 1
+  vol_days: 20
+
+views:
+  horizon_weeks: 4
+  min_train_weeks: 156
+  signal_threshold: 0.5    # create a view only if |q| > threshold * sigma
+  ridge_alpha: null        # null = select by time-series CV on the validation period
+  c_news: 1.0              # tuned on validation
+  c_tech: 1.0              # tuned on validation
+  kappa: 1.0               # uncertainty scaling of Omega_news, tuned on validation
+
+news:
+  half_life_days: 14
+  lookback_weeks: 8
+  zscore_weeks: 156
+
+optimizer:
+  gamma: 2.5
+  w_max: 0.30
+  turnover_penalty: 0.001  # lambda, 10 bps
+  solver: CLARABEL
+  fallback_solver: OSQP
+
+backtest:
+  cost_bps: 5.0            # per unit of one-way turnover
+  rebalance: weekly        # weekly | monthly
+  execution_lag_days: 1    # trade at the close of the next trading day
