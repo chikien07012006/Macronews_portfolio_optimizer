@@ -76,7 +76,7 @@ Requires Python 3.11 or newer.
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env        # add a free FRED API key
+cp .env.example .env        # optional: only to change data paths
 pytest
 ```
 
@@ -99,15 +99,15 @@ from common.config import load_config
 cfg = load_config(overrides={"optimizer.w_max": 0.25, "news.half_life_days": 7})
 ```
 
-Each saved simulation run stores the full configuration it used. Secrets and paths
-(`FRED_API_KEY`, optional `MACRONEWS_DATA_DIR`, `MACRONEWS_DB_PATH`) are read from `.env`.
+Each saved simulation run stores the full configuration it used. Data paths
+(optional `MACRONEWS_DATA_DIR`, `MACRONEWS_DB_PATH`) are read from `.env`.
 
 ## Data
 
 | Source | Content | Access |
 |---|---|---|
 | Yahoo Finance | Daily adjusted prices: 9 SPDR sector ETFs, TLT, GLD, SPY (XLRE, XLC optional) | `yfinance` |
-| FRED | 3-month T-bill (DTB3) and selected macro series | `fredapi` |
+| FRED | 3-month T-bill rate (DTB3), the risk-free rate | public CSV export, no key |
 | Federal Reserve | FOMC statements, minutes, press-conference transcripts | scraped |
 | FNSPID | Time-stamped financial news linked to S&P 500 tickers | public dataset |
 | Financial PhraseBank, Shah et al. (2023) | Labelled sentiment and hawkish/dovish sentences | public datasets |

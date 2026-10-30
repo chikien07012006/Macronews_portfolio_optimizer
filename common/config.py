@@ -228,7 +228,6 @@ class Settings:
 
     data_dir: Path
     db_path: Path
-    fred_api_key: str | None
 
     @classmethod
     def from_env(cls, dotenv_path: str | Path | None = None) -> Settings:
@@ -238,5 +237,4 @@ class Settings:
         return cls(
             data_dir=data_dir,
             db_path=Path(env.get("MACRONEWS_DB_PATH", data_dir / "macronews.db")),
-            fred_api_key=env.get("FRED_API_KEY") or None,
         )

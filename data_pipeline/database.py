@@ -1,14 +1,3 @@
-"""SQLite storage for all project data.
-
-A single file (``data/macronews.db`` by default) holds market data, macro series and,
-in later milestones, documents, NLP scores, weekly news indices and saved backtest runs.
-Everything is downloaded and stored up front; the simulator later reads it back one week
-at a time.
-
-Dates are stored as ISO-8601 text (``YYYY-MM-DD``; timestamps in UTC), so plain string
-comparison in SQL (``WHERE date <= ?``) is chronological.
-"""
-
 from __future__ import annotations
 
 import sqlite3
