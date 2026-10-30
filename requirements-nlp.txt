@@ -1,0 +1,9 @@
+# NLP stack (heavy; install only where FinBERT is trained/scored, e.g. cloud GPU)
+-r requirements.txt
+torch>=2.5
+transformers>=4.45
+datasets>=3.0
+accelerate>=1.0
+datasketch>=1.6        # MinHash near-duplicate removal
+beautifulsoup4>=4.12   # FOMC HTML scraping / cleaning
+lxml>=5.3

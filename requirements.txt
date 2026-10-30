@@ -1,0 +1,28 @@
+# Core: data, portfolio engine, backtest
+numpy>=2.1
+pandas>=2.2
+scipy>=1.14
+scikit-learn>=1.5
+cvxpy>=1.6
+clarabel>=0.9
+osqp>=0.6.7
+pyarrow>=17.0
+
+# Data sources
+yfinance>=0.2.50
+fredapi>=0.5.2
+requests>=2.32
+
+# Storage / config
+sqlalchemy>=2.0
+pymysql>=1.1
+python-dotenv>=1.0
+pyyaml>=6.0
+
+# Analysis
+matplotlib>=3.9
+jupyterlab>=4.2
+
+# Dev
+pytest>=8.3
+ruff>=0.6
