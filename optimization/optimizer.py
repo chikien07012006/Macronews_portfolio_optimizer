@@ -46,9 +46,9 @@ def solve_qp(
     penalty becomes lambda 1'u, which gives a convex QP solved by CVXPY with Clarabel.
 
     ``w_prev`` is the drifted weight vector just before rebalancing, matched by label;
-    None means the first week (all cash, w~ = 0: the penalty is then a constant and the
-    problem is plain mean-variance). If the solver fails, the current weights w~ are
-    kept (no trade this week).
+    The backtest starts from w~ = w_ref (proposal, Algorithm 1). None means no holdings
+    (w~ = 0: the penalty is then a constant and the problem is plain mean-variance).
+    If the solver fails, the current weights w~ are kept (no trade this week).
     """
     assets, m, sigma = _aligned(mu, cov)
     n = len(assets)
