@@ -5,7 +5,6 @@ scipy>=1.14
 scikit-learn>=1.5
 cvxpy>=1.6
 clarabel>=0.9
-osqp>=0.6.7
 
 # Data sources
 yfinance>=0.2.50

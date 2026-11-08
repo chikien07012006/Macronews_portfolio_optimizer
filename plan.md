@@ -66,7 +66,7 @@ is mounted into the backend container as a volume, so no database server is need
 - Ledoit–Wolf covariance on 252 days, scaled to the 4-week horizon.
 - Equilibrium prior π = δΣw_ref (w_ref: 70% sectors equally weighted, 20% TLT, 10% GLD).
 - Black–Litterman posterior in Woodbury form.
-- Long-only mean-variance QP with turnover penalty (CVXPY, Clarabel, OSQP fallback).
+- Long-only mean-variance QP with turnover penalty (CVXPY with Clarabel; if the solver fails, current weights are kept).
 - Closed-form Lagrange solution and KKT checks as solver tests.
 - Baselines: equal weight, minimum variance, inverse volatility, Markowitz, BL without views.
 - Tested on synthetic data, independent of C1.

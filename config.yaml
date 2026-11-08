@@ -57,7 +57,6 @@ optimizer:
   w_max: 0.30
   turnover_penalty: 0.001  # lambda, 10 bps
   solver: CLARABEL
-  fallback_solver: OSQP
 
 backtest:
   cost_bps: 5.0            # per unit of one-way turnover

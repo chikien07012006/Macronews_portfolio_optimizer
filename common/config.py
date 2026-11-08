@@ -116,7 +116,6 @@ class OptimizerConfig:
     w_max: float = 0.30
     turnover_penalty: float = 0.001
     solver: str = "CLARABEL"
-    fallback_solver: str = "OSQP"
 
 
 @dataclass(frozen=True)
