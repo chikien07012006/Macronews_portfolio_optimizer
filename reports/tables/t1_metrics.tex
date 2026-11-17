@@ -1,0 +1,20 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Performance of the main method and the baselines, weekly rebalancing, 11/01/2013--22/12/2023. Return, volatility, maximum drawdown and weekly CVaR in \%; turnover is the annual sum of $\lVert w - \tilde w \rVert_1$. Best value among the strategies (excluding SPY) in bold.}
+\label{tab:metrics}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Strategy & Return & Volatility & Sharpe & Sortino & Max DD & CVaR 95\% & Turnover \\
+\midrule
+BL + technical views & 10.4 & 13.2 & 0.73 & 1.04 & 26.5 & 4.4 & 0.56 \\
+BL (no views) & 9.1 & 12.5 & 0.66 & 0.94 & 27.4 & 4.1 & \textbf{0.43} \\
+Markowitz & 9.0 & 14.7 & 0.59 & 0.81 & 26.0 & 5.0 & 2.12 \\
+Min variance & 7.3 & \textbf{9.7} & 0.66 & 0.95 & \textbf{19.9} & \textbf{3.0} & 0.53 \\
+Inverse volatility & 10.2 & 12.5 & \textbf{0.75} & \textbf{1.06} & 28.0 & 4.0 & 0.85 \\
+Equal weight & \textbf{10.6} & 13.4 & 0.73 & 1.05 & 30.4 & 4.4 & 0.78 \\
+\midrule
+SPY buy-and-hold & 13.3 & 16.2 & 0.78 & 1.12 & 33.7 & 5.3 & 0.09 \\
+\bottomrule
+\end{tabular}
+\end{table}

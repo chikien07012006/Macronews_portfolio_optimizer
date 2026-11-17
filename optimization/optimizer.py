@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 
 import cvxpy as cp
 import numpy as np
@@ -56,11 +57,14 @@ def solve_qp(
         raise ValueError(f"infeasible: {n} assets x w_max={w_max} < 1")
     w0 = _current_weights(w_prev, assets)
 
+    # The objective is of order 1e-4 (4-week variances); dividing it by a positive constant
+    # does not change the optimum but keeps it well above the solver tolerances.
+    scale = 1.0 / (gamma * float(np.mean(np.diag(sigma))))
     w = cp.Variable(n)
     u = cp.Variable(n)
-    objective = cp.Maximize(
+    objective = cp.Maximize(scale * (
         m @ w - gamma / 2 * cp.quad_form(w, cp.psd_wrap(sigma)) - turnover_penalty * cp.sum(u)
-    )
+    ))
     constraints = [
         cp.sum(w) == 1,
         w >= 0,
@@ -69,12 +73,18 @@ def solve_qp(
         u >= w0 - w,
     ]
     problem = cp.Problem(objective, constraints)
-    try:
-        options = CLARABEL_TOLERANCES if solver.upper() == "CLARABEL" else {}
-        problem.solve(solver=solver, **options)
-        status = problem.status
-    except cp.SolverError as exc:
-        status = f"error: {exc}"
+    # tight tolerances first; if they cannot be reached, the solver's own defaults
+    attempts = [CLARABEL_TOLERANCES, {}] if solver.upper() == "CLARABEL" else [{}]
+    for options in attempts:
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)   # "solution may be inaccurate"
+                problem.solve(solver=solver, **options)
+            status = problem.status
+        except cp.SolverError as exc:
+            status = f"error: {exc}"
+        if status == cp.OPTIMAL and w.value is not None:
+            break
 
     if status != cp.OPTIMAL or w.value is None:
         if w_prev is None:

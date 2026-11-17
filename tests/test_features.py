@@ -14,7 +14,7 @@ TICKERS = ["XLB", "XLE", "XLK", "TLT", "GLD"]
 
 
 def market(n_days=400, seed=0, tickers=TICKERS):
-    """Random daily returns and weekly excess returns on the Fridays of the same calendar."""
+    """Random daily returns and weekly returns on the Fridays of the same calendar."""
     rng = np.random.default_rng(seed)
     days = pd.bdate_range("2020-01-01", periods=n_days)
     vol = np.linspace(0.005, 0.02, len(tickers))
@@ -36,10 +36,10 @@ def test_momentum_matches_loop():
     mom = momentum(weekly, weeks=12, skip=1)
     x = weekly.to_numpy()
     for p in range(len(weekly)):
-        if p < 11:
+        if p < 12:
             assert mom.iloc[p].isna().all()
         else:
-            expected = np.prod(1 + x[p - 11:p], axis=0) - 1   # weeks t-11 .. t-1
+            expected = np.prod(1 + x[p - 12:p], axis=0) - 1   # weeks t-12 .. t-1
             np.testing.assert_allclose(mom.iloc[p].to_numpy(), expected, rtol=1e-12, atol=1e-14)
 
 
@@ -88,7 +88,7 @@ def test_shape_and_index(cfg):
     assert feats.index.names == ["decision_date", "ticker"]
     assert not feats.isna().any().any()
     dates = feats.index.get_level_values("decision_date").unique()
-    assert dates[0] == weekly.index[11]           # first week with 11 weeks of momentum
+    assert dates[0] == weekly.index[12]           # first week with 12 weeks of momentum
     assert set(feats.index.get_level_values("ticker")) == set(TICKERS)
 
 
@@ -122,7 +122,7 @@ def test_asset_enters_when_history_is_complete(cfg):
     daily.loc[daily.index < late, "GLD"] = np.nan
     feats = technical_features(weekly, daily, cfg)
     gld_dates = feats.xs("GLD", level="ticker").index
-    assert gld_dates[0] == weekly.index[30 + 11]   # MOM needs weeks t-11 .. t-1 to exist
+    assert gld_dates[0] == weekly.index[30 + 12]   # MOM needs weeks t-12 .. t-1 to exist
     # weeks without GLD are still standardized over the other four assets
     week = feats.loc[weekly.index[35]]
     assert list(week.index) == ["XLB", "XLE", "XLK", "TLT"]
@@ -133,7 +133,7 @@ def test_windows_come_from_config():
     weekly, daily = market()
     cfg = load_config(overrides={"features.mom_weeks": 6, "features.vol_days": 10})
     feats = technical_features(weekly, daily, cfg)
-    assert feats.index.get_level_values("decision_date")[0] == weekly.index[5]
+    assert feats.index.get_level_values("decision_date")[0] == weekly.index[6]
 
 
 def test_missing_daily_column_rejected(cfg):
