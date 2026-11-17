@@ -29,6 +29,29 @@ CREATE TABLE IF NOT EXISTS macro_daily (
     value  REAL,
     PRIMARY KEY (date, series)
 );
+
+CREATE TABLE IF NOT EXISTS backtest_runs (
+    run_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    config_json TEXT NOT NULL,
+    metrics_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS backtest_nav (
+    run_id TEXT NOT NULL REFERENCES backtest_runs(run_id),
+    date TEXT NOT NULL,
+    nav REAL NOT NULL,
+    PRIMARY KEY (run_id, date)
+);
+
+CREATE TABLE IF NOT EXISTS backtest_weights (
+    run_id TEXT NOT NULL REFERENCES backtest_runs(run_id),
+    date TEXT NOT NULL,
+    ticker TEXT NOT NULL,
+    weight REAL NOT NULL,
+    PRIMARY KEY (run_id, date, ticker)
+);
 """
 
 
