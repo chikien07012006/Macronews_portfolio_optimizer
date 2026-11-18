@@ -60,13 +60,17 @@ has unit tests for it. The 2018–2023 test period is evaluated only once, at th
 ├── simulation/          week-by-week replay, view generation, rebalancing, metrics
 ├── backend/             FastAPI service (planned)
 ├── frontend/            React web interface (planned)
+├── reports/             generated figures, tables and raw results
 ├── tests/               pytest suite
 ├── data/                local data and the SQLite database (git-ignored)
 └── docs/                project description and proposal
 ```
 
 Folders are plain Python packages run from the repository root; nothing needs to be
-installed as a package.
+installed as a package. Each folder has its own README:
+[common](common/README.md), [data_pipeline](data_pipeline/README.md),
+[optimization](optimization/README.md), [simulation](simulation/README.md),
+[nlp](nlp/README.md), [reports](reports/README.md) and [tests](tests/README.md).
 
 ## Getting started
 
@@ -79,6 +83,16 @@ pip install -r requirements.txt
 cp .env.example .env        # optional: only to change data paths
 pytest
 ```
+
+Then build the local database (needs internet; the tests do not):
+
+```bash
+python -m data_pipeline.download_market   # ETF prices from Yahoo Finance
+python -m data_pipeline.download_fred     # 3-month T-bill rate from FRED
+```
+
+Both write to `data/macronews.db` and can be re-run safely. Next, run the
+[technical experiment](#run-the-technical-experiment).
 
 The NLP stack (PyTorch, Transformers) is large and only needed where FinBERT is fine-tuned or
 used for scoring, typically on a cloud GPU:
@@ -124,7 +138,9 @@ python -m simulation.report --out reports/validation
 ```
 
 The runner writes NAV, weekly returns, turnover, weights and metrics under `results/`; the
-report command turns these into PDF/PNG figures and CSV/LaTeX tables. Do not inspect and tune
+report command turns these into PDF/PNG figures and CSV/LaTeX tables. Options such as `--only`
+(run selected strategies) and `--save-db` (store runs in SQLite) are described in
+[simulation/README.md](simulation/README.md). Do not inspect and tune
 against 2018--2023 while developing parameters: doing so turns that intended final holdout
 into validation data.
 
